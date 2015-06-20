@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project-private xmlns="http://www.netbeans.org/ns/project-private/1">
+    <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="1">
+        <file>
+            <url>controllers/SiteController.php</url>
+            <bookmark id="1">
+                <name/>
+                <line>45</line>
+                <key/>
+            </bookmark>
+        </file>
+    </editor-bookmarks>
+    <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
+        <group>
+            <file>file:/Applications/MAMP/htdocs/Basic/models/CouponCategories.php</file>
+            <file>file:/Applications/MAMP/htdocs/Basic/models/Website.php</file>
+            <file>file:/Applications/MAMP/htdocs/Basic/controllers/CouponController.php</file>
+            <file>file:/Applications/MAMP/htdocs/Basic/views/coupon/index.php</file>
+            <file>file:/Applications/MAMP/htdocs/Basic/web/js/site.js</file>
+            <file>file:/Applications/MAMP/htdocs/Basic/models/Coupon.php</file>
+        </group>
+    </open-files>
+</project-private>
