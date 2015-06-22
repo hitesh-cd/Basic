@@ -1,9 +1,15 @@
 <?php namespace app\models;
 
 use Yii;
+use app\models\CouponCategoryInfo;
 
 class CouponCategories extends \yii\db\ActiveRecord
 {
+
+    public static function tableName()
+    {
+        return 'CouponCategories';
+    }
 
     public function getCoupons()
     {

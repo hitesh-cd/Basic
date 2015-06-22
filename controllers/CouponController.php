@@ -5,30 +5,32 @@ use yii\data\Pagination;
 use Yii;
 use app\models\Coupon;
 use app\models\Website;
+use PHPExcel;
 
 class CouponController extends Controller
 {
 
-    public function actionTest()
-    {
-
-    }
-
     public function actionIndex()
     {
-        $query_coupons = Coupon::find();
-
+        $query_coupons = Coupon::find(); //coupons object
+        //pagination object
         $pagination = new Pagination([
             'defaultPageSize' => 30,
             'totalCount' => $query_coupons->count(),
         ]);
 
-        $query_vendors = \app\models\Website::find();
+        $query_vendors = \app\models\Website::find(); //making vendors object
 
-        $vendors = $query_vendors->orderBy('WebsiteName')
+        $query_categories = \app\models\CouponCategories::find(); //categories object
+
+        $vendors = $query_vendors->orderBy('WebsiteName') //fetchign 10 vendors for simplicity
             ->limit(10)
             ->all();
 
+        $categories = $query_categories->orderBy('Name') //fetching the categories
+            ->all();
+
+        //fetching coupons from db
         $coupons = $query_coupons
             ->orderBy('CouponID')
             ->with('website')
@@ -36,80 +38,140 @@ class CouponController extends Controller
             ->limit($pagination->limit)
             ->all();
 
+        //sending all the objects to the view file for rendering
         return $this->render('index', [
                 'coupons' => $coupons,
                 'pagination' => $pagination,
-                'vendors' => $vendors
+                'vendors' => $vendors,
+                'categories' => $categories
         ]);
     }
 
-    public function actionOffers($choice, $vendor_id)
+    public function actionOffers($choice, $vendor_id, $category_id)
     {
         /*
          * Description about arguments
          * $choice : 1 for coupon , 2 for deal and 3 for coupon+deal
          * $vendor_id : Either "Allvendors or vendorid
+         * $category_id : Either "Allcategories or category_id
          * Designed to return the ajax calls made from VIEW
          */
 
         $request = Yii::$app->request;
 
-        if ($request->isAjax) {
+        if ($request->isAjax) { //checking whether the request is ajax or not
             //$data = Yii::$app->getRequest()->getBodyParam('data');
-            $coupons = array('test');
-
-            $query = Coupon::find();
-
-            $pagination = new Pagination([
-                'defaultPageSize' => 60,
-                'totalCount' => $query->count(),
-            ]);
-            if ($choice == 1) {
-                if ($vendor_id == "Allvendors") {
-                    $coupons = $query->orderBy('CouponID')
-                        ->offset($pagination->offset)
-                        ->with('website')
-                        ->limit($pagination->limit)
-                        ->where("isDeal=0")
-                        ->all();
-                } else {
-                    $coupons = $query->orderBy('CouponID')
-                        ->offset($pagination->offset)
-                        ->with('website')
-                        ->limit($pagination->limit)
-                        ->where(array("isDeal" => 0, "WebsiteID" => $vendor_id))
-                        ->all();
-                }
-            } else if ($choice == 2) {
-
-                if ($vendor_id == "Allvendors") {
-
-                    $coupons = $query->orderBy('CouponID')
-                        ->offset($pagination->offset)
-                        ->with('website')
-                        ->limit($pagination->limit)
-                        ->where("isDeal=1")
-                        ->all();
-                } else {
-
-                    $coupons = $query->orderBy('CouponID')
-                        ->offset($pagination->offset)
-                        ->with('website')
-                        ->limit($pagination->limit)
-                        ->where(array("isDeal" => 1, "WebsiteID" => $vendor_id))
-                        ->all();
-                }
-            } else {
-                //choice 3
-                $coupons = $query->orderBy('CouponID')
-                    ->offset($pagination->offset)
+            //var_dump($category_id);
+            $query = Coupon::find()
+                    ->joinWith('couponCategories')
                     ->with('website')
-                    ->limit($pagination->limit)
-                    ->where(array("WebsiteID" => $vendor_id))
-                    ->all();
+                    ->orderBy('CouponID')->limit(30);
+
+            $coupons = $query;
+            if ($choice == 1) { //coupons
+                $coupons = $query->where("isDeal=0");
+            } elseif ($choice == 2) { //deals
+                $coupons = $query->where("isDeal=1");
             }
-            return $this->renderAjax('offers', ['coupons' => $coupons, 'pagination' => $pagination]);
-            //return json_encode(['status' => 'SUCCESS', 'coupons' => $coupons]);
+
+            if ($vendor_id != "Allvendors") {
+                $coupons = $coupons->andWhere(array("WebsiteID" => $vendor_id));
+            }
+
+            if ($category_id != 'Allcategories') {
+                $coupons = $coupons->andWhere(array("`CouponCategories`.`CategoryID`    " => $category_id));
+            } else {
+                $category_id = -1;
+            }
+            $coupons = $coupons->all();
+
+            return $this->renderAjax('offers', ['coupons' => $coupons]);
+            //return json_encode(['status' => 'SUCCESS', 'coupons' => $coupons]); for reference purpose
         }
+    }
+
+    public function actionExcelcoupons($choice, $vendor_id, $category_id)
+    {
+        /*
+         * Description about arguments
+         * $choice : 1 for coupon , 2 for deal and 3 for coupon+deal
+         * $vendor_id : Either "Allvendors or vendorid
+         * $category_id : Either "Allcategories or category_id
+         * Designed to return the ajax calls made from VIEW
+         */
+
+        $query = Coupon::find()
+                ->joinWith('couponCategories')
+                ->with('website')
+                ->orderBy('CouponID')->limit(30); //limiting to 30 coupons only for simplicity
+
+        $coupons = $query; //cloning that to coupon for choice : 3
+        if ($choice == 1) { //coupons
+            $coupons = $query->where("isDeal=0");
+        } elseif ($choice == 2) { //deals
+            $coupons = $query->where("isDeal=1");
+        }
+
+        if ($vendor_id != "Allvendors") {
+            $coupons = $coupons->andWhere(array("WebsiteID" => $vendor_id));
+        }
+
+        if ($category_id != 'Allcategories') {
+            $coupons = $coupons->andWhere(array("`CouponCategories`.`CategoryID`    " => $category_id));
+        } else {
+            $category_id = -1;
+        }
+        $coupons = $coupons->all();
+
+        $objPHPExcel = new \PHPExcel(); //make a new object of the php excel
+
+        $sheet = 0; //start on sheet zero
+
+        $objPHPExcel->setActiveSheetIndex($sheet);
+
+        $row = 2; //start from 2nd row
+        //making 4 columns
+        $objPHPExcel->getActiveSheet()->getColumnDimension('A')->setWidth(20);
+        $objPHPExcel->getActiveSheet()->getColumnDimension('B')->setWidth(20);
+        $objPHPExcel->getActiveSheet()->getColumnDimension('C')->setWidth(20);
+        $objPHPExcel->getActiveSheet()->getColumnDimension('D')->setWidth(20);
+
+        //setting titles on 1st row
+        $objPHPExcel->getActiveSheet()->setTitle('Coupons Excel Sheet')
+            ->setCellValue('A1', 'CouponID')
+            ->setCellValue('B1', 'CouponCode')
+            ->setCellValue('C1', 'VendorID')
+            ->setCellValue('D1', 'Coupon Title');
+        foreach ($coupons as $coupon) {
+
+            $objPHPExcel->getActiveSheet()->setCellValue('A' . $row, $coupon->CouponID);
+
+            $objPHPExcel->getActiveSheet()->setCellValue('B' . $row, $coupon->CouponCode);
+
+            $objPHPExcel->getActiveSheet()->setCellValue('C' . $row, $coupon->WebsiteID);
+
+            if ($coupon->Title != NULL) { //as all coupons don't have titles
+                $objPHPExcel->getActiveSheet()->setCellValue('D' . $row, $coupon->Title);
+            } else {
+                $objPHPExcel->getActiveSheet()->setCellValue('D' . $row, substr($coupon->Description, 0, 20));
+            }
+
+            $row++; //incrementing row
+        }
+
+        //default header type has to assign
+        header('Content-Type: application/vnd.ms-excel');
+
+        $filename = "CouponData.xlsx"; //filename of the downloaded excel sheet
+
+        header('Content-Disposition: attachment;filename=' . $filename . ' ');
+
+        header('Cache-Control: max-age=0');
+
+        $objWriter = \PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');
+
+        $objWriter->save('php://output'); //getting output
+
+        exit();
     }
 }

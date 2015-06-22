@@ -3,6 +3,8 @@
 use Yii;
 use yii\base\Model;
 use app\models\Website;
+use app\models\CouponCategories;
+use app\models\CouponCategoryInfo;
 
 class Coupon extends \yii\db\ActiveRecord
 {
