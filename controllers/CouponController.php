@@ -10,6 +10,20 @@ use PHPExcel;
 class CouponController extends Controller
 {
 
+    public function actionTest()
+    {
+        $query_coupons = Coupon::find();
+
+        $coupons = $query_coupons->with('website')
+            ->limit(1)
+            ->all();
+        //$categories = $coupons->website;
+        var_dump($coupons);
+//        var_dump($categories);
+
+        exit();
+    }
+
     public function actionIndex()
     {
         $query_coupons = Coupon::find(); //coupons object
@@ -62,28 +76,7 @@ class CouponController extends Controller
         if ($request->isAjax) { //checking whether the request is ajax or not
             //$data = Yii::$app->getRequest()->getBodyParam('data');
             //var_dump($category_id);
-            $query = Coupon::find()
-                    ->joinWith('couponCategories')
-                    ->with('website')
-                    ->orderBy('CouponID')->limit(30);
-
-            $coupons = $query;
-            if ($choice == 1) { //coupons
-                $coupons = $query->where("isDeal=0");
-            } elseif ($choice == 2) { //deals
-                $coupons = $query->where("isDeal=1");
-            }
-
-            if ($vendor_id != "Allvendors") {
-                $coupons = $coupons->andWhere(array("WebsiteID" => $vendor_id));
-            }
-
-            if ($category_id != 'Allcategories') {
-                $coupons = $coupons->andWhere(array("`CouponCategories`.`CategoryID`    " => $category_id));
-            } else {
-                $category_id = -1;
-            }
-            $coupons = $coupons->all();
+            $coupons = Coupon::getCouponsBasedOnTypeVendorCategory($choice, $vendor_id, $category_id);
 
             return $this->renderAjax('offers', ['coupons' => $coupons]);
             //return json_encode(['status' => 'SUCCESS', 'coupons' => $coupons]); for reference purpose
@@ -100,28 +93,7 @@ class CouponController extends Controller
          * Designed to return the ajax calls made from VIEW
          */
 
-        $query = Coupon::find()
-                ->joinWith('couponCategories')
-                ->with('website')
-                ->orderBy('CouponID')->limit(30); //limiting to 30 coupons only for simplicity
-
-        $coupons = $query; //cloning that to coupon for choice : 3
-        if ($choice == 1) { //coupons
-            $coupons = $query->where("isDeal=0");
-        } elseif ($choice == 2) { //deals
-            $coupons = $query->where("isDeal=1");
-        }
-
-        if ($vendor_id != "Allvendors") {
-            $coupons = $coupons->andWhere(array("WebsiteID" => $vendor_id));
-        }
-
-        if ($category_id != 'Allcategories') {
-            $coupons = $coupons->andWhere(array("`CouponCategories`.`CategoryID`    " => $category_id));
-        } else {
-            $category_id = -1;
-        }
-        $coupons = $coupons->all();
+        $coupons = Coupon::getCouponsBasedOnTypeVendorCategory($choice, $vendor_id, $category_id);
 
         $objPHPExcel = new \PHPExcel(); //make a new object of the php excel
 
